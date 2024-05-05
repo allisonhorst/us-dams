@@ -86,9 +86,11 @@ const damsSelectedState = dams.filter(d => d.state == pickState);
 ```js
 function stateMap(width, height) {
     return Plot.plot({
-    height: height - 30,
+    height: height - 40,
     marginTop: 0,
-    marginBottom: 0,
+    marginBottom: 15,
+    title: `${pickState} dams`,
+    caption: `Size represents maximum storage capacity (acre-feet). The scale should only be used to compare dam sizes within ${pickState}, not across states.`,
     color: {legend: true, domain: conditions, range: colors},
     projection: {type: "albers-usa", domain: selectedState[0].geometry},
     r: {range: [2, 15]},
@@ -96,7 +98,7 @@ function stateMap(width, height) {
         Plot.geo(selectedState, {fill: "#ccc", opacity: 0.3}),
         Plot.geo(selectedStateCounties, {stroke: "white", strokeWidth: 1, opacity: 0.3}),
         Plot.geo(selectedState, {stroke: "#ccc", strokeWidth: 1}),
-        Plot.dot(damsSelectedState, {x: "longitude", y: "latitude", r: "maxStorageAcreFt", fill: "conditionAssessment", tip: true, title: d => `Dam name: ${d.name}\nYear completed: ${d.yearCompleted}\nMax storage: ${d.maxStorageAcreFt} acre-ft\nPrimary purpose: ${d.primaryPurpose}\nCondition: ${d.conditionAssessment}`}),
+        Plot.dot(d3.sort(damsSelectedState, d => d.conditionAssessment == "Not available", d => d.maxStorageAcreFt).reverse(), {x: "longitude", y: "latitude", r: "maxStorageAcreFt", opacity: 0.6, fill: "conditionAssessment", tip: true, title: d => `Dam name: ${d.name}\nYear completed: ${d.yearCompleted}\nMax storage: ${d.maxStorageAcreFt} acre-ft\nPrimary purpose: ${d.primaryPurpose}\nCondition: ${d.conditionAssessment}`, sort: null}),
         Plot.dot(capitalSelectedState, {x: "longitude", y: "latitude", fill: "#ff2272", r: 6, stroke: "white", strokeWidth: 1, symbol: "star"}),
         Plot.text(capitalSelectedState, {x: "longitude", y: "latitude", text: "description", fill: "black", dy: -18, fontWeight: 400, fontSize: 14, stroke: "white", strokeWidth: 2})
     ]
@@ -109,10 +111,10 @@ const pickState = view(Inputs.select(dams.filter(d => d.state != "Guam" & d.stat
 ```
 
 <div class="grid grid-cols-3 grid-rows-3">
-<div class="card grid-colspan-1 grid-rowspan-1">Of ${d3.format(",")(damsSelectedState.length)} NID recorded dams in ${pickState}, <b>${d3.format(",")(damsSelectedState.filter(d => d.conditionAssessment == "Poor").length)} ${damsSelectedState.filter(d => d.conditionAssessment == "Poor").length == 1 ? "is" : "are"} in poor condition</b>. Of those in poor condition, <b>${d3.format(",")(damsSelectedState.filter(d => d.conditionAssessment == "Poor" && d.hazardPotential == "High").length)} ${damsSelectedState.filter(d => d.conditionAssessment == "Poor" && d.hazardPotential == "High").length == 1 ? "has" : "have"} high hazard potential</b>, where "downstream flooding would likely result in loss of human life."</div>
-<div class="card grid-colspan-2 grid-rowspan-1">${resize((width, height) => stackedBarChart(width, height))}</div>
+<div class="card grid-colspan-1 grid-rowspan-1" style="font-size: 17px">Of ${d3.format(",")(damsSelectedState.length)} NID recorded dams in ${pickState}, <b>${d3.format(",")(damsSelectedState.filter(d => d.conditionAssessment == "Poor").length)} ${damsSelectedState.filter(d => d.conditionAssessment == "Poor").length == 1 ? "is" : "are"} in poor condition</b>. Of those in poor condition, <b>${d3.format(",")(damsSelectedState.filter(d => d.conditionAssessment == "Poor" && d.hazardPotential == "High").length)} ${damsSelectedState.filter(d => d.conditionAssessment == "Poor" && d.hazardPotential == "High").length == 1 ? "has" : "have"} high hazard potential</b>, where "downstream flooding would likely result in loss of human life."</div>
+<div class="card grid-colspan-2 grid-rowspan-1">${resize((width) => stackedBarChart(width))}</div>
 <div class="card grid-colspan-2 grid-rowspan-3">${resize((width, height) => stateMap(width, height))}</div>
-<div class="card grid-colspan-1 grid-rowspan-1">Apples!</div>
+<div class="card grid-colspan-1 grid-rowspan-1">Apples</div>
 <div class="card grid-colspan-1 grid-rowspan-1">Apples!</div>
 <div class="card grid-colspan-1 grid-rowspan-1">Apples!</div>
 </div>
@@ -120,23 +122,25 @@ const pickState = view(Inputs.select(dams.filter(d => d.state != "Guam" & d.stat
 <!-- County FIPS codes from: https://github.com/kjhealy/fips-codes/blob/master/county_fips_master.csv -->
 
 ```js
-const toggleBeeswarm = view(Inputs.radio(["primary purpose", "hazard potential"], {label: "Color by dam: ", value: "primary purpose"}));
+const toggleBeeswarm = Inputs.radio(["primary purpose", "hazard potential"], {label: "Color by dam: ", value: "primary purpose"});
+
+const toggleBeeswarmValue = Generators.input(toggleBeeswarm);
 ```
 
 ```js
 const lastInspectionBeeswarm = Plot.plot({
   width,
   height: 300,
+  style: {overflow: "visible"},
   color: {legend: true}, //, domain: purposes, range: purposeColors},
-  title: "Years since last inspection",
-  subtitle: `${d3.format(",")(damsSelectedState.filter(d => d.yearsSinceInspection != "NA").length)} out of ${d3.format(",")(damsSelectedState.length)} dams in ${pickState} (${d3.format(".3s")(100 * damsSelectedState.filter(d => d.yearsSinceInspection != "NA").length / damsSelectedState.length)}%) are represented in this chart; those missing an inspection date are not shown. Based on the dams with a reported last inspection date, at least ${d3.format(".1f")(100 * damsSelectedState.filter(d => d.yearsSinceInspection <=10).length / damsSelectedState.length)}% of all ${pickState} dams have been inspected within past 10 years, and at least ${d3.format(".1f")(100 * damsSelectedState.filter(d => d.yearsSinceInspection <=10 && d.hazardPotential == "High").length / damsSelectedState.filter(d => d.hazardPotential == "High").length)}% of all ${pickState} dams considered to have High hazard potential have been inspected within past 10 years.`,
+  subtitle: ``,
   caption: `Years since last inspection for individual dams in ${pickState}. Each dot represents a single dam; size is representative of maximum storage capacity. Dams toward the right on the chart have been inspected more recently.`,
   r: {range: [2, 20]},
   x: {tickFormat: "0f", reverse: true, label: "Years since last inspection"},
   marks: [
     Plot.frame({insetPadding: 5}),
     Plot.dot(damsSelectedState,
-    Plot.dodgeY({x: d => +d.yearsSinceInspection, r: "maxStorageAcreFt", fill: toggleBeeswarm == "primary purpose" ? "primaryPurpose" : "hazardPotential", tip: true, stroke: "white", strokeWidth: 0.5}))
+    Plot.dodgeY({x: d => +d.yearsSinceInspection, r: "maxStorageAcreFt", fill: toggleBeeswarmValue == "primary purpose" ? "primaryPurpose" : "hazardPotential", tip: true, stroke: "white", strokeWidth: 0.5}))
     ]
 });
 ```
@@ -146,6 +150,9 @@ const xScale = Plot.scale({ x: { domain: d3.extent(damsSelectedState, d => +d.ye
 ```
 
 <div class="card">
+<h2>Years since last inspection</h2>
+<h3>${d3.format(",")(damsSelectedState.filter(d => d.yearsSinceInspection != "NA").length)} out of ${d3.format(",")(damsSelectedState.length)} dams in ${pickState} (${d3.format(".3s")(100 * damsSelectedState.filter(d => d.yearsSinceInspection != "NA").length / damsSelectedState.length)}%) are represented in this chart; those missing an inspection date are not shown. Based on the dams with a reported last inspection date, at least ${d3.format(".1f")(100 * damsSelectedState.filter(d => d.yearsSinceInspection <=10).length / damsSelectedState.length)}% of all ${pickState} dams have been inspected within past 10 years, and at least ${d3.format(".1f")(100 * damsSelectedState.filter(d => d.yearsSinceInspection <=10 && d.hazardPotential == "High").length / damsSelectedState.filter(d => d.hazardPotential == "High").length)}% of all ${pickState} dams considered to have High hazard potential have been inspected within past 10 years.</h3>
+${toggleBeeswarm}
 ${display(lastInspectionBeeswarm)}
 </div>
 
@@ -304,11 +311,11 @@ display(conditionCounts);
 ```
 
   ```js
-  function stackedBarChart(width, height) {
+  function stackedBarChart(width) {
     return Plot.plot({
     width,
     title: `${pickState} dam conditions`,
-    height: height - 60,
+    height: 70,
     //marginTop: 40,
     //marginBottom: 30,
     color: {domain: conditions, range: colors, legend: true},

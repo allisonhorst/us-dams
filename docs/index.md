@@ -96,13 +96,15 @@ const conditionChart = Plot.plot({
 });
 ```
 
+Of ${d3.format(",")(dams.length)} dams in the U.S. included in the [National Inventory of Dams](https://nid.sec.usace.army.mil), ${d3.format(",")(dams.filter(d => d.conditionAssessment == "Poor").length)} are listed as being in Poor condition. Of those in Poor condition, ${d3.format(",")(dams.filter(d => d.conditionAssessment == "Poor" && d.hazardPotential == "High").length)} have High hazard potential, where "downstream flooding would likely result in loss of human life."
+
 <div class="grid grid-cols-3 grid-rows-4">
   <div class="grid-colspan-2 grid-rowspan-4 card">
   <h2>US dam locations</h2>
   <h3>Total dams reported as of 29 Apr 2024: ${d3.format(",")(dams.length)}</h3>
   ${showDensity}
   ${resize(width => damLocations(width))}</div>
-  <div class="grid-colspan-1 card">A</div>
+  <div class="grid-colspan-1 card">Apples</div>
   <div class="grid-colspan-1 grid-rowspan-3 card">
   <h2>U.S. dam conditions</h2>
   ${resize((width, height) => donutFunction(nationalConditions, `Total: ${d3.format(",")(dams.length)}`, width, height))}</div>
@@ -284,4 +286,18 @@ return pickTimeline == "New dams" ?
       Plot.ruleY([damsUnknownYearCount], {strokeDasharray: [4,4]})
     ]});
 }
+```
+
+```js
+const capacityDistribution = Plot.plot({
+  color: {legend: true},
+  y: {type: "sqrt", grid: true},
+  marks: [
+    Plot.rectY(dams, Plot.binX({y: "count"}, {x: d => Math.log10(d.maxStorageAcreFt || 1), inset: 0, fill: "conditionAssessment"}))
+  ]
+});
+```
+
+```js
+display(capacityDistribution);
 ```
